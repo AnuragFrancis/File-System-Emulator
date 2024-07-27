@@ -375,17 +375,28 @@ pair<string, string> split_name(const string& str) {
 }
 
 TreeNode* cd(TreeNode* root, TreeNode* pwd, string path) {
-    TreeNode* temp = find_node(root, pwd, path);
-    if (temp == NULL) {
-        cout << "cd: " << path << ": No such file or directory" << endl;
-        return NULL;
-    } else if (temp->type != 'd') {
-        cout << "cd: " << path << ": Not a directory" << endl;
-        return NULL;
+    if (path == ".") {
+        return pwd;
+    } else if (path == "..") {
+        if (pwd->parent != NULL) {
+            return pwd->parent;
+        } else {
+            cout << "cd: " << path << ": Already at root directory" << endl;
+            return pwd;
+        }
+    } else {
+        TreeNode* temp = find_node(root, pwd, path);
+        if (temp == NULL) {
+            cout << "cd: " << path << ": No such file or directory" << endl;
+            return NULL;
+        } else if (temp->type != 'd') {
+            cout << "cd: " << path << ": Not a directory" << endl;
+            return NULL;
+        }
+        return temp;
     }
-
-    return temp;
 }
+
 
 TreeNode* create(TreeNode* root, TreeNode* pwd, string path, char type) {
     pair<string, string> split_path = split_name(path);
@@ -475,37 +486,76 @@ void dupl(TreeNode* root, TreeNode* pwd, string src, string dst, int keep) {
 }
 
 void edit(TreeNode* root, TreeNode* pwd, string path) {
-    TreeNode* file = find_node(root, pwd, path);
-    if (file == NULL) {
-        cout << "edit: " << path << ": No such file or directory" << endl;
-        return;
-    } else if (file->type == 'd') {
-        cout << "edit: " << path << ": Is a directory" << endl;
+    TreeNode* temp = find_node(root, pwd, path);
+    if (temp == NULL) {
+        cout << "the file '" << path << "' does not exist" << endl;
+        string choice = "";
+        cout << "create it? (y/n) ";
+        cin >> choice;
+        if (choice != "y" && choice != "Y" && choice != "yes" && choice != "Yes")
+            return;
+        temp = create(root, pwd, path, '-');
+    }
+    if (temp->type != '-') {
+        cout << "'" << path << "' is not a file" << endl;
         return;
     }
 
-    string content;
-    cout << "Enter content: ";
-    getline(cin >> ws, content);
-    file->content.clear();
-    file->content.push_back(content);
-    file->mdate = time_now();
+    if (!temp->content.empty()) {
+        if (temp->perm < 4) { // Read permission (4 -> read)
+            cout << "you don't have permission to read '" << path << "'" << endl;
+        } else {
+            list<string> old_content = temp->content;
+            cout << "content: " << endl;
+            for (list<string>::iterator it = old_content.begin(); it != old_content.end(); it++)
+                cout << *it << endl;
+        }
+
+        if (temp->perm < 2 || temp->perm == 4 || temp->perm == 5) { // Write permission (2 -> write)
+            cout << "you don't have permission to write '" << path << "'" << endl;
+            return;
+        }
+
+        string choice = "";
+        cout << endl << "overwrite? (y/n) ";
+        cin >> choice;
+        if (choice != "y" && choice != "Y" && choice != "yes" && choice != "Yes")
+            return;
+    }
+
+    temp->content.clear();
+    cout << endl << temp->name << " : (enter \\n to save)" << endl;
+    string line;
+    while (1) {
+        getline(cin, line);
+        if (line == "\\n")
+            break;
+        temp->content.push_back(line);
+    }
+    temp->mdate = time_now();
 }
 
 void cat(TreeNode* root, TreeNode* pwd, string path) {
     TreeNode* file = find_node(root, pwd, path);
+    
     if (file == NULL) {
         cout << "cat: " << path << ": No such file or directory" << endl;
         return;
-    } else if (file->type == 'd') {
+    }
+    
+    if (file->type == 'd') {
         cout << "cat: " << path << ": Is a directory" << endl;
         return;
     }
-
-    for (const auto& line : file->content) {
-        cout << line;
+    
+    if (file->perm < 4) { // Check if the read permission is present
+        cout << "cat: " << path << ": Permission denied" << endl;
+        return;
     }
-    cout << endl;
+    
+    for (const auto& line : file->content) {
+        cout << line << endl;
+    }
 }
 
 void chmod(TreeNode* root, TreeNode* pwd, string path, string new_modes) {
@@ -539,3 +589,4 @@ void linux_tree(TreeNode* root) {
 string time_now() {
     return "2024-07-27 12:00:00";
 }
+

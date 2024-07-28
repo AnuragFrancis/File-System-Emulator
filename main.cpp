@@ -225,21 +225,29 @@ void print_tree(TreeNode* root, string prev) {
 
     while (root != NULL) {
         string branch;
-        if (root->link != NULL)
-            branch = "|--";
-        else
-            branch = "`--";
-
         string branch_next;
-        if (prev == "")
-            branch_next = "";
-        else if (prev[prev.size() - 1] == '|')
+        
+        if (root->link != NULL) {
+            branch = "|";
             branch_next = "|";
-        else
+        } else {
+            branch = "`";
             branch_next = " ";
+        }
 
-        cout << prev << branch << "--" << root->name << endl;
-        prev = prev + branch_next + "    ";
+        if (prev == "") {
+            cout << branch << "-- " << root->name;
+            if (root->type == 'd')
+                cout << "/";
+            cout << endl;
+            prev = branch_next;
+        } else {
+            cout << prev + "   " + branch << "-- " << root->name;
+            if (root->type == 'd')
+                cout << "/";
+            cout << endl;
+            prev += "   " + branch_next;
+        }
 
         print_tree(root->child, prev);
 
@@ -247,7 +255,6 @@ void print_tree(TreeNode* root, string prev) {
         prev = prev.substr(0, prev.size() - 4);
     }
 }
-
 void print_ls(TreeNode* root) {
     if (root == NULL) {
         cout << "No such directory" << endl;
